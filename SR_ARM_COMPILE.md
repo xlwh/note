@@ -1,4 +1,6 @@
-# 系统环境
+# StarRocks ARM环境下编译
+
+### 系统环境
 
 1. 系统版本：Ubuntu 20.04
 2. 系统架构：ARM X64
@@ -7,8 +9,7 @@
 5. 硬盘：128GB（SSD）
 
 
-
-# 编译环境安装
+### 编译环境安装
 
 - 更新 apt-get 软件库
 
@@ -115,7 +116,7 @@ sudo apt-get install -y make unzip python2 byacc automake libtool bzip2 ccache o
 
 
 
-# 编译准备
+### 编译准备
 
 修改aws-sdk
 
