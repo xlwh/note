@@ -98,7 +98,8 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50 --slave /
 - 安装Cmake
 
 ```
-echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
 sudo apt update
 sudo apt install cmake
 ```
