@@ -111,7 +111,7 @@ sudo apt install cmake
 ```shell
 sudo apt install -y build-essential cmake flex automake bison binutils-dev libiberty-dev zip libncurses5-dev curl ninja-build
 sudo apt-get install -y make unzip python2 byacc automake libtool bzip2 ccache openssl libssl-dev
-sudo apt-get -y install autoconf autopoint
+sudo apt-get -y install autoconf autopoint python
 ```
 
 - 安装链接工具：https://github.com/xlwh/mold
