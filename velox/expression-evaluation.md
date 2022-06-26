@@ -1,6 +1,6 @@
 # 表达式执行
 
-Velox 具有矢量化表达式评估功能。 它在 FilterProject 运算符中用于评估过滤器和项目表达式，并在 HiveConnector 中用于评估“剩余”过滤器表达式。 它也可以单独使用。
+Velox 具有矢量化表达式执行功能。 它在 FilterProject 运算符中用于执行过滤器和project表达式，并在 HiveConnector 中用于评估“剩余”过滤器表达式。 它也可以单独使用。
 
 查看 velox/example/ExpressionEval.cpp 以获取 API 的示例用法。
 
