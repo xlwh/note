@@ -16,13 +16,13 @@ struct CeilFunction {
 };
 ```
 
-所有简单的函数类都需要模板化，并提供“调用”方法（或下面描述的变体之一）。 顶级模板参数提供类型系统适配器，它允许开发人员使用非原始类型，例如字符串、数组、映射和结构（请查看下面的示例）。 虽然顶层模板参数不用于对原始类型进行操作的函数，例如上面示例中的那个，但它仍然需要指定。
+所有简单的函数类都需要模板化，并提供“call”方法（或下面描述的变体之一）。 顶级模板参数提供类型系统适配器，它允许开发人员使用非原始类型，例如字符串、数组、映射和结构（请查看下面的示例）。 虽然顶层模板参数不用于对原始类型进行操作的函数，例如上面示例中的那个，但它仍然需要指定。
 
-call 方法本身也可以被模板化或重载，以允许在不同的输入类型上调用函数，例如 浮动和双倍。 请注意，模板实例化只会在函数注册期间发生，如下面的“注册”部分所述。
+call 方法本身也可以被模板化或重载，以允许在不同的输入类型上调用函数，例如float和double。 请注意，模板实例化只会在函数注册期间发生，如下面的“Registration”部分所述。
 
 请避免使用过时的 VELOX_UDF_BEGIN/VELOX_UDF_END 宏。
 
-“Call”函数（或其变体之一）可能返回 (a) void 表示该函数从不返回空值，或 (b) 布尔值表示计算结果是否为空。 True 表示结果不为空； false 表示结果为空。 如果“ceil(0)”返回null，上面的函数可以重写如下：
+“Call”函数（或其变体之一）可能没有返回值，也可能返回布尔值表示计算结果是否为空。True 表示结果不为空； false 表示结果为空。 如果“ceil(0)”返回null，上面的函数可以重写如下：
 
 ```
 template <typename TExecParams>
@@ -35,7 +35,7 @@ struct NullableCeilFunction {
 };
 ```
 
-参数列表必须以输出参数“result”开头，后跟函数参数。 “结果”参数必须是参考。 函数参数必须是 const 引用。 参数的 C++ 类型必须与以下映射中指定的 Velox 类型匹配：
+参数列表必须以输出参数“result”开头，后跟函数参数。 “result”参数必须是非const引用。 函数参数必须是 const 引用。 参数的 C++ 类型必须与以下映射中指定的 Velox 类型匹配：
 
 | Velox Type | C++ Argument Type           | C++ Result Type             |
 | :--------- | :-------------------------- | :-------------------------- |
@@ -55,11 +55,11 @@ struct NullableCeilFunction {
 
 arg_type 和 out_type 模板是使用类定义中的 VELOX_DEFINE_FUNCTION_TYPES(TExecParams) 宏定义的。 这些类型提供类似于 std::string、std::vector、std::unordered_map 和 std::tuple 的接口。 底层实现经过优化，可以在没有额外复制的情况下从列表示中读取和写入。
 
-注意：暂时不要过多关注复杂类型映射。 为了完整起见，它们被包含在这里，但需要一个完整的单独讨论。
+注意：暂时不用过多关注复杂类型映射。 为了完整起见，它们被包含在这里，但需要一个完整的单独讨论。
 
 ### Null Behavior
 
-大多数函数都有默认的 null 行为，例如 任何参数中的空值都会产生空结果。 表达式评估引擎会自动为此类输入生成空值，省略对实际函数的调用。 如果给定函数对空输入有不同的行为，它必须定义一个“callNullable”函数而不是“call”函数。 下面是一个 ceil 函数的人工示例，它为 null 输入返回 0：
+大多数函数都有默认的null行为，例如:任何参数中的空值都会产生空结果。 表达式执行引擎会自动为此类输入生成空值，省略对实际函数的调用。 如果给定函数对空输入有不同的行为，它必须定义一个“callNullable”函数而不是“call”函数。 下面是一个 ceil 函数的人工示例，它为 null 输入返回 0：
 
 ```
 template <typename TExecParams>
@@ -67,7 +67,7 @@ struct CeilFunction {
   template <typename T>
   FOLLY_ALWAYS_INLINE void callNullable(T& result, const T* a) {
     // Return 0 if input is null.
-    if (a) {
+    if (a ！= nullptr) {
       result = std::ceil(*a);
     } else {
       result = 0;
@@ -76,11 +76,11 @@ struct CeilFunction {
 };
 ```
 
-请注意， callNullable 函数将参数作为原始指针而不是引用以允许指定空值。 callNullable() 还可以返回 void 以指示该函数不产生空值。
+请注意， callNullable 函数将参数作为原始指针而不是引用来允许指定空值。 callNullable() 还可以返回 void 以指示该函数不产生空值。
 
 #### Null-Free Fast Path
 
-“callNullFree”函数可以代替“call”和/或“callNullable”函数实现或与“call”和/或“callNullable”函数一起实现。 当仅实现“callNullFree”函数时，如果任何输入参数为空（如默认空行为）或任何输入参数为复杂类型，则将跳过该函数的评估并自动生成空值，并且 在其值的任何位置包含 null，例如 具有空元素的数组。 如果“callNullFree”与“call”和/或“callNullable”一起实现，则对批处理应用 O(N * D) 检查以查看任何输入参数是否可能为或包含 null，其中 N 是 输入参数，D 是复杂类型的嵌套深度。 只有当可以明确确定没有空值时才会调用“callNullFree”。 在这种情况下，“callNullFree”可以通过避免任何每行空检查来充当快速路径。
+“callNullFree”函数可以代替“call”和/或“callNullable”函数实现或与“call”和/或“callNullable”函数一起实现。 当仅实现“callNullFree”函数时，如果任何输入参数为空（如默认空行为）或任何输入参数为复杂类型，则将跳过该函数的执行并自动生成空值，并且在其值的任何位置包含 null，例如:空元素的数组。 如果“callNullFree”与“call”和/或“callNullable”一起实现，则对批处理应用 O(N * D) 检查以查看任何输入参数是否可能为或包含 null，其中 N 是 输入参数，D 是复杂类型的嵌套深度。 只有当可以明确确定没有空值时才会调用“callNullFree”。 在这种情况下，“callNullFree”可以通过避免任何每行空检查来充当快速路径。
 
 下面是一个 array_min 函数的示例，它返回数组中的最小值：
 
@@ -108,7 +108,7 @@ struct ArrayMinFunction {
 
 ### Determinism
 
-默认情况下，假设简单函数是确定性的，例如 给定相同的输入，它们总是产生相同的结果。 如果不是这种情况，该函数必须定义一个静态 constexpr bool is_deterministic 成员：
+默认情况下，假设简单函数是确定性的，例如给定相同的输入，它们总是产生相同的结果。 如果不是这种情况，该函数必须定义一个静态 constexpr bool is_deterministic 成员：
 
 ```
 static constexpr bool is_deterministic = false;
@@ -260,7 +260,7 @@ registerFunction<CeilFunction, float, float>({"ceil", "ceiling");
 
 ### Codegen
 
-要允许在代码生成中使用该函数，请将函数的“内核”提取到一个头文件中，然后从“call”或“callNullable”中调用它。 这是一个带有 ceil 函数的示例。
+要允许在代码生成中使用该函数，请将函数的“kernel”提取到一个头文件中，然后从“call”或“callNullable”中调用它。 这是一个带有 ceil 函数的示例。
 
 ```
 #include "velox/functions/prestosql/ArithmeticImpl.h"
@@ -939,7 +939,7 @@ FunctionSignatureBuilder 中使用的类型名称可以是小写标准类型、�
 
 使用 velox/functions/prestosql/tests/FunctionBaseTest.h 中的 FunctionBaseTest 作为基类添加测试。 将您的测试和 .cpp 文件命名为 <function-name>Test，例如 CardinalityTest.cpp 中的 CardinalityTest 或 IsNullTest.cpp 中的 IsNullTest。
 
-FunctionBaseTest 有许多用于生成测试向量的辅助方法。 它还提供了一个 evaluate() 方法，该方法接受 SQL 表达式和输入数据，计算表达式并返回结果向量。 SQL 表达式使用 DuckDB 解析，类型解析逻辑利用注册期间指定的函数签名。 assertEqualVectors() 方法采用两个向量，预期的和实际的，并断言它们表示相同的值。 向量的编码可能不相同。
+FunctionBaseTest 有许多用于生成测试vector的辅助方法。 它还提供了一个 evaluate() 方法，该方法接受 SQL 表达式和输入数据，计算表达式并返回结果向量。 SQL 表达式使用 DuckDB 解析，类型解析逻辑利用注册期间指定的函数签名。 assertEqualVectors() 方法采用两个向量，预期的和实际的，并断言它们表示相同的值。 向量的编码可能不相同。
 
 ```
 TEST_F(ArrayContainsTest, integerWithNulls) {
